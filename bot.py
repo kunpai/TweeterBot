@@ -226,7 +226,7 @@ async def sendtweet():
     engine="davinci",
     prompt="What is the best philosophy in life?",
     temperature=0.75,
-    max_tokens=150,
+    max_tokens=280,
     top_p=1,
     presence_penalty=0.6,
     stop=["\n"],
