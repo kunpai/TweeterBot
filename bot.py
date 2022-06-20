@@ -219,26 +219,22 @@ async def _dm_specific (ctx = SlashContext, message = "", username = ""):
     embed.add_field(name = username, value=message, inline=False)
     await ctx.send(embed=embed)
 
-@tasks.loop(minutes=30.0)
+@tasks.loop(hours=1.0)
 async def sendtweet():
     print("Sending tweet")
     response = openai.Completion.create(
-    engine="davinci",
-    prompt="What is the best philosophy in life?",
-    temperature=0.75,
-    max_tokens=280,
-    top_p=1,
-    presence_penalty=0.6,
-    stop=["\n"],
+            engine="text-davinci-002",
+            prompt="What is your philosophy?",
+            temperature=1,
+            max_tokens=280
     )
     tweet = response.choices[0].text
-    if tweet != "" and tweet != " " and tweet != "\"" and tweet != "\" " and len(tweet)<=140 and len(tweet)>1:
+    print(tweet)
+    if tweet != "" and tweet != " " and tweet != "\"" and tweet != "\" " and len(tweet)<=280 and len(tweet)>1:
         print(tweet)
         api.update_status(tweet)
     else:
         print("No tweet")
-    channel = client.get_channel(775764541278519304)
-    await channel.send("Tweeted")
     
 
 @client.event
@@ -259,10 +255,4 @@ async def on_message(message):
             pictureflag = 0
             return
         
-    # if message.content.startswith('🥫'):
-    #     await message.channel.send('meow thank u for can')
-
-    # if message.content.startswith('!'):
-    #     await message.channel.send('meow meow I just want can')
-
 client.run(os.environ['DISCORD_TOKEN'])
