@@ -219,15 +219,52 @@ async def _dm_specific (ctx = SlashContext, message = "", username = ""):
     embed.add_field(name = username, value=message, inline=False)
     await ctx.send(embed=embed)
 
-@tasks.loop(hours=1.0)
+@tasks.loop(minutes=30.0)
 async def sendtweet():
     print("Sending tweet")
-    response = openai.Completion.create(
-            engine="text-davinci-002",
-            prompt="What is your philosophy?",
-            temperature=1,
-            max_tokens=280
-    )
+    flag = random.randint(0,5)
+    if flag == 0:
+        response = openai.Completion.create(
+                engine="text-davinci-002",
+                prompt="What is your philosophy?",
+                temperature=1,
+                max_tokens=280
+        )
+    if flag == 1:
+        response = openai.Completion.create(
+                engine="text-davinci-002",
+                prompt="What is the best piece of advice?",
+                temperature=1,
+                max_tokens=280
+        )
+    if flag == 2:
+        response = openai.Completion.create(
+                engine="text-davinci-002",
+                prompt="What do self-help authors recommend?",
+                temperature=1,
+                max_tokens=280
+        )
+    if flag == 3:
+        response = openai.Completion.create(
+                engine="text-davinci-002",
+                prompt="What is the best way to deal with your problems?",
+                temperature=1,
+                max_tokens=280
+        )
+    if flag == 4:
+        response = openai.Completion.create(
+                engine="text-davinci-002",
+                prompt="What is the best quote?",
+                temperature=1,
+                max_tokens=280
+        )
+    if flag == 5:
+        response = openai.Completion.create(
+                engine="text-davinci-002",
+                prompt="How to be a good human being?",
+                temperature=1,
+                max_tokens=280
+        )
     tweet = response.choices[0].text
     print(tweet)
     if tweet != "" and tweet != " " and tweet != "\"" and tweet != "\" " and len(tweet)<=280 and len(tweet)>1:
