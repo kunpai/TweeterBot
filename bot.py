@@ -43,6 +43,7 @@ async def on_ready():
     global members
     members = guild.members
     sendtweet.start()
+    tweet_at_loop.start()
 
 @slash.slash(name ="tweet", description="Sends a text tweet")
 async def _tweet (ctx = SlashContext, tweet=None):
@@ -219,7 +220,43 @@ async def _dm_specific (ctx = SlashContext, message = "", username = ""):
     embed.add_field(name = username, value=message, inline=False)
     await ctx.send(embed=embed)
 
-@tasks.loop(minutes=30.0)
+@slash.slash(name = "tweet_ques", description="Tweets a question to a username from saved dictionary")
+async def _tweet_at (ctx = SlashContext, person = ""):
+    username = userids[person]
+    response = openai.Completion.create(
+                engine="text-davinci-002",
+                prompt="Ask an insightful question.",
+                temperature=1,
+                max_tokens=280
+        )
+    question = response.choices[0].text
+    tweet = username + " " + question
+    api.update_status(tweet)
+    embed = discord.Embed(
+            title="Tweeted", description="", color=0x0000ff)
+    embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
+    embed.add_field(name = username, value=question, inline=False)
+    await ctx.send(embed=embed)
+
+@tasks.loop(hours=12.0)
+async def tweet_at_loop():
+    print("tweeting")
+    global userids
+    print(userids)
+    if len(userids)>0:
+        # chooses random key from usernum
+        key = random.choice(list(userids.keys()))
+        response = openai.Completion.create(
+                engine="text-davinci-002",
+                prompt="Ask an insightful question.",
+                temperature=1,
+                max_tokens=280
+        )
+        question = response.choices[0].text
+        tweet = userids[key] + " " + question
+        api.update_status(tweet)
+
+@tasks.loop(minutes=60.0)
 async def sendtweet():
     print("Sending tweet")
     flag = random.randint(0,5)
