@@ -1,3 +1,4 @@
+from click import command
 import discord
 import os
 import random
@@ -9,6 +10,7 @@ from datetime import datetime, date, time, timedelta
 import numpy as np
 import tweepy
 import openai
+import sqlite3
 load_dotenv()
 
 intents = discord.Intents.default()
@@ -16,7 +18,12 @@ intents.members = True
 client = discord.Client(intents = intents)
 slash = SlashCommand(client, sync_commands=True)
 openai.api_key = os.environ['API']
+DATABASE = './userids.db'
+connection = sqlite3.connect(DATABASE)
+cursor = connection.cursor()
 
+create_table = "CREATE TABLE IF NOT EXISTS data (name TEXT, userid TEXT, usernum TEXT)"
+cursor.execute(create_table)
 
 pictureflag = 0
 tweetwithpic = ""
@@ -104,6 +111,12 @@ async def _add (ctx = SlashContext):
     embed.add_field(name = query, value=userid, inline=False)
     userids[query] = "@"+ userid
     usernum[query] = number
+    # add these to the database
+    global DATABASE
+    connection = sqlite3.connect(DATABASE)
+    cursor = connection.cursor()
+    cursor.execute("INSERT INTO data VALUES (?,?,?)", (query, userids[query], usernum[query]))
+    connection.commit()
     print(userids)
     query = ""
     userid = ""
@@ -112,11 +125,16 @@ async def _add (ctx = SlashContext):
 
 @slash.slash(name ="view", description="View the current username list")
 async def _view (ctx = SlashContext):
+    global DATABASE
+    connection = sqlite3.connect(DATABASE)
+    cursor = connection.cursor()
+    dumpTable = cursor.execute("SELECT * FROM data")
+    dump = dumpTable.fetchall()
     embed = discord.Embed(
-            title="Saved Usernames", description="", color=0x0000ff)
+            title="Table", description="", color=0x0000ff)
     embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
-    for key in userids:
-        embed.add_field(name = key, value=userids[key], inline=False)
+    for row in dump:
+        embed.add_field(name = row[0], value=row[1], inline=False)
     await ctx.send(embed=embed)
 
 @slash.slash(name = "follow", description="Follows last username added")
@@ -212,8 +230,12 @@ async def _dm_specific (ctx = SlashContext, message = "", username = ""):
             title="Status", description="", color=0x0000ff)
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
         embed.add_field(name = "No username added", value="Search for a username", inline=False)
-    
-    api.send_direct_message(recipient_id=usernum[username], text=message)
+    global DATABASE
+    connection = sqlite3.connect(DATABASE)
+    cursor = connection.cursor()
+    searchTable = cursor.execute("SELECT * FROM data WHERE name = ?", (username,)).fetchall()
+    userid = searchTable[0][2]
+    api.send_direct_message(recipient_id=userid, text=message)
     embed = discord.Embed(
             title="DM Sent", description="", color=0x0000ff)
     embed.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
@@ -222,7 +244,12 @@ async def _dm_specific (ctx = SlashContext, message = "", username = ""):
 
 @slash.slash(name = "tweet_ques", description="Tweets a question to a username from saved dictionary")
 async def _tweet_at (ctx = SlashContext, person = ""):
-    username = userids[person]
+    global DATABASE
+    connection = sqlite3.connect(DATABASE)
+    cursor = connection.cursor()
+    command = cursor.execute("SELECT userid FROM data where name = ?", (person,)).fetchall()
+    print(command)
+    username = command[0][0]
     response = openai.Completion.create(
                 engine="text-davinci-002",
                 prompt="Ask an insightful question.",
@@ -241,20 +268,22 @@ async def _tweet_at (ctx = SlashContext, person = ""):
 @tasks.loop(hours=12.0)
 async def tweet_at_loop():
     print("tweeting")
-    global userids
-    print(userids)
-    if len(userids)>0:
-        # chooses random key from usernum
-        key = random.choice(list(userids.keys()))
-        response = openai.Completion.create(
-                engine="text-davinci-002",
-                prompt="Ask an insightful question.",
-                temperature=1,
-                max_tokens=280
-        )
-        question = response.choices[0].text
-        tweet = userids[key] + " " + question
-        api.update_status(tweet)
+    global DATABASE
+    connection = sqlite3.connect(DATABASE)
+    cursor = connection.cursor()
+    # select random entry from database
+    command = cursor.execute("SELECT * FROM data ORDER BY RANDOM() LIMIT 1").fetchall()
+    print(command)
+    username = command[0][1]
+    response = openai.Completion.create(
+            engine="text-davinci-002",
+            prompt="Ask an insightful question.",
+            temperature=1,
+            max_tokens=280
+    )
+    question = response.choices[0].text
+    tweet = username + " " + question
+    api.update_status(tweet)
 
 @tasks.loop(minutes=60.0)
 async def sendtweet():
