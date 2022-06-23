@@ -357,5 +357,5 @@ async def on_message(message):
         else:
             pictureflag = 0
             return
-        
+      
 client.run(os.environ['DISCORD_TOKEN'])
