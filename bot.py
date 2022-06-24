@@ -333,11 +333,7 @@ async def sendtweet():
         )
     tweet = response.choices[0].text
     print(tweet)
-    if tweet != "" and tweet != " " and tweet != "\"" and tweet != "\" " and len(tweet)<=280 and len(tweet)>1:
-        print(tweet)
-        api.update_status(tweet)
-    else:
-        print("No tweet")
+    api.update_status(tweet)
     
 
 @client.event
